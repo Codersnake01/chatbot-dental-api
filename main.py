@@ -35,7 +35,7 @@ async def receive_message(request: Request):
             phone = message["from"]
             text = message["text"]["body"]
             # Procesamos el mensaje con nuestro bot dental
-            response_text = procesar_mensaje(text)
+            response_text = procesar_mensaje(text, phone)  # phone es el identificador del usuario
             send_whatsapp_message(phone, response_text)
     except Exception as e:
         print("Error procesando mensaje:", e)

@@ -11,3 +11,4 @@ wheels/
 
 # Environment secrets
 .env
+credentials.json
