@@ -7,7 +7,8 @@ import requests
 from dotenv import load_dotenv
 from bot import procesar_mensaje
 
-load_dotenv()  # Carga las variables del archivo .env
+if not os.getenv("RENDER"):  # Render define esta variable automáticamente
+    load_dotenv()
 
 app = FastAPI()
 
