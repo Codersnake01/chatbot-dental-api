@@ -1,3 +1,5 @@
+from database import SessionLocal
+from models import Clinica
 import os
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import PlainTextResponse
@@ -30,13 +32,28 @@ async def receive_message(request: Request):
     body = await request.json()
     try:
         entry = body["entry"][0]["changes"][0]["value"]
+        
+        # 1. Obtener el ID del número de WhatsApp que recibió el mensaje
+        phone_number_id = entry["metadata"]["phone_number_id"]
+        
+        # 2. Buscar la clínica correspondiente en la base de datos
+        db = SessionLocal()
+        clinica = db.query(Clinica).filter(Clinica.whatsapp_phone_id == phone_number_id).first()
+        db.close()
+        
+        if not clinica:
+            print("Clínica no encontrada para", phone_number_id)
+            return {"status": "clínica no configurada"}
+        
+        # 3. Procesar los mensajes (si los hay)
         if "messages" in entry:
             message = entry["messages"][0]
             phone = message["from"]
             text = message["text"]["body"]
-            # Procesamos el mensaje con nuestro bot dental
-            response_text = procesar_mensaje(text, phone)  # phone es el identificador del usuario
+            # Pasamos el calendar_id de la clínica al bot
+            response_text = procesar_mensaje(text, phone, clinica.google_calendar_id)
             send_whatsapp_message(phone, response_text)
+            
     except Exception as e:
         print("Error procesando mensaje:", e)
     return {"status": "ok"}

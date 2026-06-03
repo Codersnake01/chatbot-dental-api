@@ -7,9 +7,8 @@ import calendar_service  # nuestro módulo de Google Calendar
 estado_usuarios = {}
 
 # ID del calendario de prueba (más adelante será por clínica)
-CALENDARIO_ID = '5fc6082eaad7b22dc1b73c2b9ad62a0ad6b7ebccf83379f207ed955cdb610e1e@group.calendar.google.com'
 
-def procesar_mensaje(text: str, user_id: str) -> str:
+def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
     """Procesa el mensaje del paciente y devuelve la respuesta del bot."""
     texto = text.strip()
     
@@ -26,7 +25,7 @@ def procesar_mensaje(text: str, user_id: str) -> str:
                 fin = (fecha_hora + timedelta(hours=1)).isoformat()
                 try:
                     evento = calendar_service.create_event(
-                        CALENDARIO_ID,
+                        calendar_id,
                         summary='Cita dental',
                         start_time=inicio,
                         end_time=fin,
