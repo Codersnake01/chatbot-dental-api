@@ -70,12 +70,14 @@ def send_whatsapp_message(to, text):
     response = requests.post(url, json=data, headers=headers)
     print("WhatsApp response:", response.json())
 
+from sqlalchemy import text   # Agrega este import al inicio del archivo
+
 @app.get("/db-check")
 def db_check():
     try:
         from database import engine
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return {"db": "ok"}
     except Exception as e:
         return {"db": "error", "detail": str(e)}
