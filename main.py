@@ -1,10 +1,10 @@
 import os
+from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import PlainTextResponse
 import requests
 from dotenv import load_dotenv
 from sqlalchemy import text
-from datetime import datetime, timedelta
 
 from database import SessionLocal
 from models import Clinica, Paciente, Cita
@@ -67,10 +67,11 @@ async def receive_message(request: Request):
             print("Clínica no encontrada para", phone_number_id)
             return {"status": "clínica no configurada"}
 
-        ahora = datetime.utcnow()
-        # Verificar período de prueba o membresía activa
+        # Usar datetime con zona horaria para comparar con fecha_fin_prueba (TIMESTAMPTZ)
+        ahora_aware = datetime.now(timezone.utc)
+
         if not clinica.activa:
-            if not clinica.fecha_fin_prueba or ahora > clinica.fecha_fin_prueba:
+            if not clinica.fecha_fin_prueba or ahora_aware > clinica.fecha_fin_prueba:
                 db.close()
                 return {"status": "período de prueba expirado o clínica inactiva"}
 
@@ -87,16 +88,18 @@ async def receive_message(request: Request):
     return {"status": "ok"}
 
 # -----------------------------------------------
-# Endpoint de recordatorios de cita (24h antes)
+# Endpoint de recordatorios automáticos
 # -----------------------------------------------
 @app.post("/send-reminders")
 def send_reminders(secret: str = Query(...)):
     if secret != CRON_SECRET:
         return {"error": "No autorizado"}, 403
 
-    ahora = datetime.utcnow()
-    ventana_inicio = ahora + timedelta(hours=24) - timedelta(minutes=5)
-    ventana_fin = ahora + timedelta(hours=24) + timedelta(minutes=5)
+    ahora_naive = datetime.utcnow()  # para comparar con citas (naive)
+    ventana_inicio = ahora_naive + timedelta(hours=24) - timedelta(minutes=5)
+    ventana_fin = ahora_naive + timedelta(hours=24) + timedelta(minutes=5)
+
+    ahora_aware = datetime.now(timezone.utc)  # para fechas de prueba (aware)
 
     db = SessionLocal()
     clinicas = db.query(Clinica).all()
@@ -105,7 +108,7 @@ def send_reminders(secret: str = Query(...)):
 
     for clinica in clinicas:
         # Solo operar con clínicas activas o en prueba vigente
-        if not clinica.activa and (not clinica.fecha_fin_prueba or ahora > clinica.fecha_fin_prueba):
+        if not clinica.activa and (not clinica.fecha_fin_prueba or ahora_aware > clinica.fecha_fin_prueba):
             continue
 
         # 1. Recordatorios de cita (24h ±5min)
@@ -128,9 +131,8 @@ def send_reminders(secret: str = Query(...)):
 
         # 2. Aviso de vencimiento de prueba (48h antes)
         if not clinica.activa and clinica.fecha_fin_prueba and clinica.telefono_admin:
-            # Solo si la prueba terminará en 48 horas (±5 min para que se procese en algún momento del día)
-            aviso_ventana = ahora + timedelta(hours=48)
-            diferencia = clinica.fecha_fin_prueba - aviso_ventana
+            aviso_ventana = ahora_aware + timedelta(hours=48)  # aware
+            diferencia = clinica.fecha_fin_prueba - aviso_ventana  # ambos aware
             if timedelta(minutes=0) <= diferencia <= timedelta(minutes=10):
                 mensaje_prueba = (
                     "⚠️ Tu período de prueba de DentalBot finaliza en 48 horas. "
