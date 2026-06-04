@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from database import SessionLocal
 from models import Clinica, Paciente, Cita
 
@@ -29,7 +29,7 @@ if st.session_state.clinica_id is None:
                     whatsapp_phone_id=whatsapp_id,
                     google_calendar_id=calendar_id,
                     telefono_admin=telefono_admin,
-                    fecha_fin_prueba=datetime.utcnow() + timedelta(days=14),
+                    fecha_fin_prueba=datetime.now(timezone.utc) + timedelta(days=14),  # <-- aware datetime
                     activa=False
                 )
                 db.add(nueva)
@@ -38,13 +38,13 @@ if st.session_state.clinica_id is None:
                 st.session_state.clinica_id = nueva.id
                 db.close()
                 st.success("¡Registrado con éxito! Tienes 2 semanas de prueba gratuita.")
-                st.rerun()   # ← CORREGIDO
+                st.rerun()
     else:
         clinica_id = st.text_input("ID de la clínica")
         if st.button("Entrar"):
             if clinica_id:
                 st.session_state.clinica_id = int(clinica_id)
-                st.rerun()   # ← CORREGIDO
+                st.rerun()
     st.stop()
 
 # ---------- Panel principal ----------
@@ -60,7 +60,8 @@ st.title(f"🦷 {clinica.nombre} – Panel de Citas")
 
 # Aviso de vencimiento de prueba
 if not clinica.activa and clinica.fecha_fin_prueba:
-    dias_restantes = (clinica.fecha_fin_prueba - datetime.utcnow()).days
+    ahora = datetime.now(timezone.utc)                 # aware datetime
+    dias_restantes = (clinica.fecha_fin_prueba - ahora).days   # ambos aware
     if dias_restantes <= 3:
         st.warning(
             f"⚠️ Tu período de prueba vence en {dias_restantes} día(s). "
