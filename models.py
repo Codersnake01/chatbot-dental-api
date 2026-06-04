@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
 from database import Base
 
 class Clinica(Base):
@@ -24,3 +24,4 @@ class Cita(Base):
     fecha_hora = Column(DateTime)
     estado = Column(String, default="pendiente")
     motivo = Column(String)
+    recordatorio_enviado = Column(Boolean, default=False)

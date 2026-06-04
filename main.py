@@ -4,9 +4,10 @@ from fastapi.responses import PlainTextResponse
 import requests
 from dotenv import load_dotenv
 from sqlalchemy import text
+from datetime import datetime, timedelta
 
 from database import SessionLocal
-from models import Clinica
+from models import Clinica, Paciente, Cita      # ← Importaciones añadidas
 from bot import procesar_mensaje
 
 # Cargar variables de entorno solo en local
@@ -18,6 +19,7 @@ app = FastAPI()
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+CRON_SECRET = os.getenv("CRON_SECRET", "supersecreto")
 
 # -----------------------------------------------
 # Endpoint de salud
@@ -80,6 +82,46 @@ async def receive_message(request: Request):
     except Exception as e:
         print("Error procesando mensaje:", e)
     return {"status": "ok"}
+
+# -----------------------------------------------
+# Endpoint de recordatorios automáticos
+# -----------------------------------------------
+@app.post("/send-reminders")
+def send_reminders(secret: str = Query(...)):
+    if secret != CRON_SECRET:
+        return {"error": "No autorizado"}, 403
+
+    ahora = datetime.utcnow()
+    ventana_inicio = ahora + timedelta(hours=24) - timedelta(minutes=5)
+    ventana_fin = ahora + timedelta(hours=24) + timedelta(minutes=5)
+
+    db = SessionLocal()
+    clinicas = db.query(Clinica).all()
+    recordatorios_enviados = 0
+
+    for clinica in clinicas:
+        citas = db.query(Cita).filter(
+            Cita.clinica_id == clinica.id,
+            Cita.fecha_hora >= ventana_inicio,
+            Cita.fecha_hora <= ventana_fin,
+            Cita.recordatorio_enviado == False
+        ).all()
+
+        for cita in citas:
+            paciente = db.query(Paciente).filter(Paciente.id == cita.paciente_id).first()
+            if not paciente:
+                continue
+
+            hora_str = cita.fecha_hora.strftime("%H:%M")
+            mensaje = f"🦷 Recordatorio: tienes una cita dental mañana a las {hora_str}. ¡Te esperamos!"
+
+            send_whatsapp_message(paciente.telefono, mensaje)
+            cita.recordatorio_enviado = True
+            recordatorios_enviados += 1
+
+    db.commit()
+    db.close()
+    return {"recordatorios_enviados": recordatorios_enviados}
 
 # -----------------------------------------------
 # Función para enviar mensajes de WhatsApp
