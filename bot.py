@@ -9,7 +9,7 @@ from models import Clinica, Paciente, Cita
 estado_usuarios = {}
 
 
-def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
+def procesar_mensaje(text: str, user_id: str, calendar_id: str, whatsapp_phone_id: str) -> str:
     """Procesa el mensaje del paciente y devuelve la respuesta del bot."""
     texto = text.strip()
 
@@ -38,8 +38,9 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                         db.commit()
                         db.refresh(paciente)
 
+                    # Buscar la clínica por whatsapp_phone_id (único)
                     clinica = db.query(Clinica).filter(
-                        Clinica.google_calendar_id == calendar_id
+                        Clinica.whatsapp_phone_id == whatsapp_phone_id
                     ).first()
                     if clinica:
                         nueva_cita = Cita(
@@ -95,7 +96,6 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
 
 
 def parsear_fecha_hora(texto: str) -> datetime | None:
-    """Convierte frases en español a datetime usando dateparser y regex para horas."""
     match = re.search(
         r'a las\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
         texto,
@@ -110,7 +110,6 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         elif meridiano == 'am' and hora == 12:
             hora = 0
 
-        # Quitar la parte de la hora para que dateparser solo vea la fecha
         texto_sin_hora = re.sub(
             r'a las\s+\d{1,2}(?::\d{2})?\s*(am|pm)?',
             '',
@@ -129,8 +128,7 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         )
         if fecha:
             return fecha.replace(hour=hora, minute=minutos, second=0, microsecond=0)
-        else:
-            return None
+        return None
     else:
         return dateparser.parse(
             texto,

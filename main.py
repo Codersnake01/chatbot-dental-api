@@ -79,7 +79,7 @@ async def receive_message(request: Request):
             message = entry["messages"][0]
             phone = message["from"]
             text = message["text"]["body"]
-            response_text = procesar_mensaje(text, phone, clinica.google_calendar_id)
+            response_text = procesar_mensaje(text, phone, clinica.google_calendar_id, clinica.whatsapp_phone_id)
             send_whatsapp_message(phone, response_text)
 
         db.close()
