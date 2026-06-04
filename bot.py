@@ -6,25 +6,19 @@ import dateparser
 from database import SessionLocal
 from models import Clinica, Paciente, Cita
 
-# Estado temporal de las conversaciones
 estado_usuarios = {}
 
-
 def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
-    """Procesa el mensaje del paciente y devuelve la respuesta del bot."""
     texto = text.strip()
 
-    # --- Si el usuario está en medio del flujo de cita ---
     if user_id in estado_usuarios:
         paso = estado_usuarios[user_id]
-
         if paso == 'ESPERANDO_FECHA':
             fecha_hora = parsear_fecha_hora(texto)
             if fecha_hora:
                 inicio = fecha_hora.isoformat()
                 fin = (fecha_hora + timedelta(hours=1)).isoformat()
                 try:
-                    # 1. Crear evento en Google Calendar
                     calendar_service.create_event(
                         calendar_id,
                         summary='Cita dental',
@@ -32,23 +26,14 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                         end_time=fin,
                         description=f'Paciente: {user_id}'
                     )
-
-                    # 2. Guardar la cita en la base de datos
                     db = SessionLocal()
-                    # Buscar o crear paciente
-                    paciente = db.query(Paciente).filter(
-                        Paciente.telefono == user_id
-                    ).first()
+                    paciente = db.query(Paciente).filter(Paciente.telefono == user_id).first()
                     if not paciente:
                         paciente = Paciente(telefono=user_id)
                         db.add(paciente)
                         db.commit()
                         db.refresh(paciente)
-
-                    # Obtener la clínica por su google_calendar_id
-                    clinica = db.query(Clinica).filter(
-                        Clinica.google_calendar_id == calendar_id
-                    ).first()
+                    clinica = db.query(Clinica).filter(Clinica.google_calendar_id == calendar_id).first()
                     if clinica:
                         nueva_cita = Cita(
                             clinica_id=clinica.id,
@@ -59,10 +44,7 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                         )
                         db.add(nueva_cita)
                         db.commit()
-
                     db.close()
-
-                    # Limpiar estado
                     del estado_usuarios[user_id]
                     return (
                         f"✅ Cita agendada para el "
@@ -80,9 +62,7 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                     "📌 2026-06-15 10:30"
                 )
 
-    # --- Palabras clave iniciales ---
     texto_lower = texto.lower()
-
     if any(p in texto_lower for p in ["cita", "agendar", "turno", "hora"]):
         estado_usuarios[user_id] = 'ESPERANDO_FECHA'
         return (
@@ -92,13 +72,10 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
             "📅 el lunes a las 3 pm\n"
             "📅 2026-06-15 10:30"
         )
-
     elif any(p in texto_lower for p in ["dolor", "duele", "urgencia", "emergencia"]):
         return "Lamento tu molestia. ¿Tienes hinchazón o fiebre? (Sí/No) Para darte prioridad."
-
     elif any(p in texto_lower for p in ["precio", "costo", "cuánto"]):
         return "Puedes consultar precios orientativos: limpieza dental desde 30 USD, ortodoncia desde 80 USD. ¿Te interesa algo?"
-
     else:
         return (
             "Hola, soy el asistente virtual de Clínica Dental. Puedo:\n"
@@ -108,12 +85,7 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
             "¿En qué te ayudo?"
         )
 
-
 def parsear_fecha_hora(texto: str) -> datetime | None:
-    """
-    Convierte frases en español a datetime usando dateparser y regex para horas.
-    """
-    # Si el texto contiene "a las", extraemos la hora manualmente
     match = re.search(
         r'a las\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
         texto,
@@ -123,13 +95,11 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         hora = int(match.group(1))
         minutos = int(match.group(2)) if match.group(2) else 0
         meridiano = match.group(3).lower() if match.group(3) else None
-
         if meridiano == 'pm' and hora < 12:
             hora += 12
         elif meridiano == 'am' and hora == 12:
             hora = 0
 
-        # Quitar la parte de la hora para que dateparser solo vea la fecha
         texto_sin_hora = re.sub(
             r'a las\s+\d{1,2}(?::\d{2})?\s*(am|pm)?',
             '',
@@ -137,7 +107,6 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
             flags=re.IGNORECASE
         ).strip()
 
-        # Parsear la fecha con dateparser
         fecha = dateparser.parse(
             texto_sin_hora,
             languages=['es'],
@@ -149,10 +118,8 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         )
         if fecha:
             return fecha.replace(hour=hora, minute=minutos, second=0, microsecond=0)
-        else:
-            return None
+        return None
     else:
-        # Sin "a las", usar dateparser directamente
         return dateparser.parse(
             texto,
             languages=['es'],

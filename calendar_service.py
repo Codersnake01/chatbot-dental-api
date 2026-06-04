@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def get_calendar_service():
-    # En local usa el archivo credentials.json; en producción, la variable de entorno
     if os.path.exists('credentials.json'):
         creds = service_account.Credentials.from_service_account_file(
             'credentials.json', scopes=SCOPES)
@@ -36,14 +35,8 @@ def create_event(calendar_id, summary, start_time, end_time, description=None):
     event = {
         'summary': summary,
         'description': description,
-        'start': {
-            'dateTime': start_time,
-            'timeZone': 'America/Asuncion',
-        },
-        'end': {
-            'dateTime': end_time,
-            'timeZone': 'America/Asuncion',
-        },
+        'start': {'dateTime': start_time, 'timeZone': 'America/Asuncion'},
+        'end': {'dateTime': end_time, 'timeZone': 'America/Asuncion'},
     }
     event = service.events().insert(calendarId=calendar_id, body=event).execute()
     return event

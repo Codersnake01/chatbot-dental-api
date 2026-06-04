@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from database import Base
 
 class Clinica(Base):
@@ -8,6 +8,9 @@ class Clinica(Base):
     whatsapp_phone_id = Column(String, unique=True, nullable=False)
     google_calendar_id = Column(String)
     configuracion = Column(String)
+    fecha_fin_prueba = Column(DateTime, nullable=True)
+    activa = Column(Boolean, default=False)
+    telefono_admin = Column(String, nullable=True)   # Para notificaciones de vencimiento
 
 class Paciente(Base):
     __tablename__ = "pacientes"
