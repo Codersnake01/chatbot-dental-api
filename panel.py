@@ -66,7 +66,7 @@ if not clinica.activa and clinica.fecha_fin_prueba:
         st.warning(
             f"⚠️ Tu período de prueba vence en {dias_restantes} día(s). "
             "Para continuar usando el chatbot, realiza una transferencia de $90 "
-            "a la cuenta que te indicamos y envía el comprobante al +595XXXXXXXX. "
+            "a la cuenta que te indicamos y envía el comprobante al +595992580622. "
             "Luego activaremos tu membresía."
         )
 

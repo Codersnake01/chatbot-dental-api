@@ -137,7 +137,7 @@ def send_reminders(secret: str = Query(...)):
                 mensaje_prueba = (
                     "⚠️ Tu período de prueba de DentalBot finaliza en 48 horas. "
                     "Para seguir usando el chatbot, realiza el pago de $90 por transferencia "
-                    "y envía el comprobante al +595XXXXXXXX. ¡Gracias!"
+                    "y envía el comprobante al +595992580622. ¡Gracias!"
                 )
                 send_whatsapp_message(clinica.telefono_admin, mensaje_prueba)
                 avisos_prueba += 1
