@@ -8,7 +8,9 @@ from models import Clinica, Paciente, Cita
 
 estado_usuarios = {}
 
+
 def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
+    """Procesa el mensaje del paciente y devuelve la respuesta del bot."""
     texto = text.strip()
 
     if user_id in estado_usuarios:
@@ -27,13 +29,18 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                         description=f'Paciente: {user_id}'
                     )
                     db = SessionLocal()
-                    paciente = db.query(Paciente).filter(Paciente.telefono == user_id).first()
+                    paciente = db.query(Paciente).filter(
+                        Paciente.telefono == user_id
+                    ).first()
                     if not paciente:
                         paciente = Paciente(telefono=user_id)
                         db.add(paciente)
                         db.commit()
                         db.refresh(paciente)
-                    clinica = db.query(Clinica).filter(Clinica.google_calendar_id == calendar_id).first()
+
+                    clinica = db.query(Clinica).filter(
+                        Clinica.google_calendar_id == calendar_id
+                    ).first()
                     if clinica:
                         nueva_cita = Cita(
                             clinica_id=clinica.id,
@@ -44,6 +51,7 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
                         )
                         db.add(nueva_cita)
                         db.commit()
+
                     db.close()
                     del estado_usuarios[user_id]
                     return (
@@ -85,7 +93,9 @@ def procesar_mensaje(text: str, user_id: str, calendar_id: str) -> str:
             "¿En qué te ayudo?"
         )
 
+
 def parsear_fecha_hora(texto: str) -> datetime | None:
+    """Convierte frases en español a datetime usando dateparser y regex para horas."""
     match = re.search(
         r'a las\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?',
         texto,
@@ -100,6 +110,7 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         elif meridiano == 'am' and hora == 12:
             hora = 0
 
+        # Quitar la parte de la hora para que dateparser solo vea la fecha
         texto_sin_hora = re.sub(
             r'a las\s+\d{1,2}(?::\d{2})?\s*(am|pm)?',
             '',
@@ -118,7 +129,8 @@ def parsear_fecha_hora(texto: str) -> datetime | None:
         )
         if fecha:
             return fecha.replace(hour=hora, minute=minutos, second=0, microsecond=0)
-        return None
+        else:
+            return None
     else:
         return dateparser.parse(
             texto,

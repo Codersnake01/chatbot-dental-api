@@ -38,13 +38,13 @@ if st.session_state.clinica_id is None:
                 st.session_state.clinica_id = nueva.id
                 db.close()
                 st.success("¡Registrado con éxito! Tienes 2 semanas de prueba gratuita.")
-                st.experimental_rerun()
+                st.rerun()   # ← CORREGIDO
     else:
         clinica_id = st.text_input("ID de la clínica")
         if st.button("Entrar"):
             if clinica_id:
                 st.session_state.clinica_id = int(clinica_id)
-                st.experimental_rerun()
+                st.rerun()   # ← CORREGIDO
     st.stop()
 
 # ---------- Panel principal ----------
